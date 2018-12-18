@@ -64,7 +64,27 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 
 /* USER CODE BEGIN 0 */
 char input[2]; //variable for input data from bluetooth
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    if(strcmp(input , "sw") == 0 ) // switch command
+    {
+      char output[] = "LED Switched\n";
+      HAL_UART_Transmit(&huart1 , (uint8_t*) output , 13 , 1000);
+      HAL_GPIO_TogglePin(GPIOA , GPIO_PIN_7 );
+      strncpy(input , "" , 2);
+    }
+  
+  /* NOTE : This function should not be modified, when the callback is needed,
+            the HAL_UART_TxCpltCallback can be implemented in the user file.
+   */
+}
+
+
+
 /* USER CODE END 0 */
+
+
 
 int main(void)
 {
@@ -85,6 +105,7 @@ int main(void)
   MX_GPIO_Init();
   MX_USART1_UART_Init();
   MX_TIM3_Init();
+  
 
   /* USER CODE BEGIN 2 */
 
@@ -98,14 +119,8 @@ int main(void)
 
   /* USER CODE BEGIN 3 */
     
-    HAL_UART_Receive(&huart1 ,(uint8_t *)input , 2 ,100 );
-    if(strcmp(input , "sw") == 0 ) // switch command
-    {
-      char output[] = "LED Switched\n";
-      HAL_UART_Transmit(&huart1 , (uint8_t*) output , 13 , 1000);
-      HAL_GPIO_TogglePin(GPIOA , GPIO_PIN_7 );
-      strncpy(input , "" , 2);
-    }
+    HAL_UART_Receive_IT(&huart1 ,(uint8_t *)input , 2);
+
       
       
   }
