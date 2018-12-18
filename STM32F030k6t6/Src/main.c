@@ -35,7 +35,11 @@
 #include "stm32f0xx_hal.h"
 
 /* USER CODE BEGIN Includes */
-
+#include "stm32_hal_legacy.h"
+#include "stdbool.h"
+#include "stdio.h"
+#include "string.h"
+#include "stdlib.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -59,21 +63,44 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-
+int parse_int (char in[]);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
-char input[2]; //variable for input data from bluetooth
-
+  char input[3]; //variable for input data from bluetooth
+    int pwm = 0;
+    bool PIR = false;
+    bool state = false;
+    int intensity = 0;
+    int time = 0;
+    
+    
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-    if(strcmp(input , "sw") == 0 ) // switch command
-    {
-      char output[] = "LED Switched\n";
-      HAL_UART_Transmit(&huart1 , (uint8_t*) output , 13 , 1000);
-      HAL_GPIO_TogglePin(GPIOA , GPIO_PIN_7 );
-      strncpy(input , "" , 2);
-    }
+  if(strcmp(input , "Lon") == 0) //turn on the lamp
+  {
+    state = true;
+  }
+  else if (strcmp(input , "Lof") == 0) //turn off the lamp
+  {
+    state = false;
+  }
+  
+  if(input[0] == 'T') // user set the time for lamp
+  {
+    char tmp[2];
+      tmp[0] = input[1];
+      tmp[1] = input[2];
+      time = strtol(tmp , NULL , 10);
+  }
+  else if(input[0]=='I' && input[1]=='n')
+  {
+      char tmp [1];
+      tmp[0] = input[2];
+      const char *a = "23";
+      intensity = strtol(tmp , NULL , 10);
+      
+  }
   
   /* NOTE : This function should not be modified, when the callback is needed,
             the HAL_UART_TxCpltCallback can be implemented in the user file.
@@ -83,8 +110,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 
 /* USER CODE END 0 */
-
-
 
 int main(void)
 {
@@ -105,10 +130,9 @@ int main(void)
   MX_GPIO_Init();
   MX_USART1_UART_Init();
   MX_TIM3_Init();
-  
 
   /* USER CODE BEGIN 2 */
-
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);  
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -118,10 +142,23 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-    
-    HAL_UART_Receive_IT(&huart1 ,(uint8_t *)input , 2);
+    HAL_UART_Receive_IT(&huart1 ,(uint8_t *)input , 3);
 
-      
+    PIR = HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_5);
+
+    if(state == true && PIR == 1)  // the lamp is on.
+    {
+      pwm = intensity * 20;
+    }
+    else if (state == false || PIR == 0) //the lamp is off
+    {
+      pwm = 0;
+    }
+    __HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_3, pwm); //update pwm value
+    if(state == true && PIR == 1)
+    {
+     HAL_Delay(time*120);
+    }
       
   }
   /* USER CODE END 3 */
@@ -184,15 +221,27 @@ void SystemClock_Config(void)
 static void MX_TIM3_Init(void)
 {
 
+  TIM_ClockConfigTypeDef sClockSourceConfig;
   TIM_MasterConfigTypeDef sMasterConfig;
   TIM_OC_InitTypeDef sConfigOC;
 
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 79;
+  htim3.Init.Prescaler = 99;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 99;
+  htim3.Init.Period = 239;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
   if (HAL_TIM_PWM_Init(&htim3) != HAL_OK)
   {
     Error_Handler();
@@ -206,10 +255,10 @@ static void MX_TIM3_Init(void)
   }
 
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 100;
+  sConfigOC.Pulse = 0;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
   {
     Error_Handler();
   }
@@ -253,9 +302,16 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : PIR_Sensor_Pin */
+  GPIO_InitStruct.Pin = PIR_Sensor_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(PIR_Sensor_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PA7 */
   GPIO_InitStruct.Pin = GPIO_PIN_7;

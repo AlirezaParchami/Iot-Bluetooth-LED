@@ -41,6 +41,8 @@
 
 /* Private define ------------------------------------------------------------*/
 
+#define PIR_Sensor_Pin GPIO_PIN_5
+#define PIR_Sensor_GPIO_Port GPIOA
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
