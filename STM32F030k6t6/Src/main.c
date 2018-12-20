@@ -73,7 +73,8 @@ int parse_int (char in[]);
     bool state = false;
     int intensity = 0;
     int time = 0;
-    
+    char tmp_T[2];
+    char tmp_I [1];
     
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
@@ -88,18 +89,31 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
   
   if(input[0] == 'T') // user set the time for lamp
   {
-    char tmp[2];
-      tmp[0] = input[1];
-      tmp[1] = input[2];
-      time = strtol(tmp , NULL , 10);
+    
+    
+      tmp_T[0] = input[1];
+      tmp_T[1] = input[2];
+      time = strtol(tmp_T , NULL , 10);
+      char message_T[] = "Time is set to ";
+      strcat(message_T , tmp_T);
+      //strcat(message_T , "\n");
+      char line[] = "\n";
+      HAL_UART_Transmit(&huart1 , message_T , 17 , 100);
+      HAL_UART_Transmit(&huart1 , line, 1 , 100);
   }
   else if(input[0]=='I' && input[1]=='n')
   {
-      char tmp [1];
-      tmp[0] = input[2];
-      const char *a = "23";
-      intensity = strtol(tmp , NULL , 10);
       
+      tmp_I[0] = input[2];
+      const char *a = "23";
+      intensity = strtol(tmp_I , NULL , 10);
+      char message_I[] = "Intensity is set to ";
+      
+      strcat(message_I , tmp_I);
+      //strcat(message_I , "\n");
+      HAL_UART_Transmit(&huart1 , message_I , 21 , 100);
+      char line[] = "\n";
+      HAL_UART_Transmit(&huart1 , line, 1 , 100);
   }
   
   /* NOTE : This function should not be modified, when the callback is needed,
