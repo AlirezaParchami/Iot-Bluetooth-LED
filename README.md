@@ -4,7 +4,7 @@ You can turn off, turn on, set timer for LED to stay on and change intensity of 
 This project is written for STM32 specially STM32F030.
 You can try this on other kinds of STM microcontrollers. (please inform me if there is any error on other devices.)
 
-Watch the video of project on YouTube to know how it works. [Click here.]()
+Watch the video of project on YouTube to know how it works. [Click here.](https://youtu.be/LamMGq5gNFQ)
 
 I describe all parts of project with comments in the *main.c* file. The Project has 3 important parts:
 
@@ -35,4 +35,6 @@ Here are all commands that you can send through Bluetooth to microcontroller:
 - **In#**: Set Intensity for LED. This function works with PWM. You can send any number from **0** to **9** instead of **#** in the command. **0** means the lowest intensity which is equal to *off* and **9** is the highest intensity of LED.
 
 #### !If you see any problem, Please tell me. Thank you.
+
+![image of stm32](https://cdn.pbrd.co/images/HWRTov9G.jpg)
  
