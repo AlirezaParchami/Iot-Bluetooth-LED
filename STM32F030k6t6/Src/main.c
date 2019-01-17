@@ -4,7 +4,7 @@
   * Description        : Main program body
   ******************************************************************************
   *
-  * COPYRIGHT(c) 2018 STMicroelectronics
+  * COPYRIGHT(c) 2019 STMicroelectronics
   *
   * Redistribution and use in source and binary forms, with or without modification,
   * are permitted provided that the following conditions are met:
@@ -67,14 +67,14 @@ int parse_int (char in[]);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
-  char input[3]; //variable for input data from bluetooth
-    int pwm = 0;
-    bool PIR = false;
-    bool state = false;
-    int intensity = 0;
-    int time = 0;
-    char tmp_T[2];
-    char tmp_I [1];
+  char input[3]; //Variable for input data from bluetooth module.
+  bool PIR = false; //PIR data. it'll be 1 only if something move in the environment. Otherwise it'll be 0.
+  bool state = false; //State of lamp based on the command the user has sent. it's on or off. if it set on "off", although PIR data was 1 but the lamp is still off.
+  int intensity = 0; //Varialble for setting lamp's intensity up. it's just one digit from 0 to 9.
+  int pwm = 0; //Varialble for setting lamp's intensity up. it's equal to 'intensity' * 20.
+  int time = 0; //The amount of time that lamp will become on.
+  char tmp_T[2]; //Temporary variable for detecting user command.
+  char tmp_I [1]; //Temporary variable for detecting user command.
     
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
@@ -87,7 +87,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     state = false;
   }
   
-  if(input[0] == 'T') // user set the time for lamp
+  if(input[0] == 'T') // user set the staying time of lamp. After this specific time, lamp will turn off.
   {
     
     
@@ -96,12 +96,11 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
       time = strtol(tmp_T , NULL , 10);
       char message_T[] = "Time is set to ";
       strcat(message_T , tmp_T);
-      //strcat(message_T , "\n");
       char line[] = "\n";
-      HAL_UART_Transmit(&huart1 , message_T , 17 , 100);
+      HAL_UART_Transmit(&huart1 , message_T , 17 , 100); // 17 is the length of 'message_T' variable. you can use 'strlen' function instead.
       HAL_UART_Transmit(&huart1 , line, 1 , 100);
   }
-  else if(input[0]=='I' && input[1]=='n')
+  else if(input[0]=='I' && input[1]=='n') //user change the intensity of lamp.
   {
       
       tmp_I[0] = input[2];
@@ -110,8 +109,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
       char message_I[] = "Intensity is set to ";
       
       strcat(message_I , tmp_I);
-      //strcat(message_I , "\n");
-      HAL_UART_Transmit(&huart1 , message_I , 21 , 100);
+      HAL_UART_Transmit(&huart1 , message_I , 21 , 100); //21 is the length of 'message_I' variable. you can use 'strlen' function instead.
       char line[] = "\n";
       HAL_UART_Transmit(&huart1 , line, 1 , 100);
   }
@@ -146,7 +144,10 @@ int main(void)
   MX_TIM3_Init();
 
   /* USER CODE BEGIN 2 */
+  
+  //start TIM_PWM to set the inensity of lamp.
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);  
+  
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -158,17 +159,22 @@ int main(void)
   /* USER CODE BEGIN 3 */
     HAL_UART_Receive_IT(&huart1 ,(uint8_t *)input , 3);
 
+    //Read data from PIR sensor data.
     PIR = HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_5);
 
+    //The Lamp should trun on only if (PIR sensor detect any move) and (user has sent "Lon" command)
     if(state == true && PIR == 1)  // the lamp is on.
     {
+      //'pwm' variable determine the intensity of lamp Depending on the digit that user has sent
+      //The digit that user has sent, store in 'intensity' variable.commands for changing the intensity are "In0","In1","In2",...,"In9".
+      //for example, if user had sent the command "Lon" and then sent "In5", the 'state' variable is equal to 1 and 'intensity' variable is equal to 5.Also the LED will bright half of its potential (50%).
       pwm = intensity * 20;
     }
     else if (state == false || PIR == 0) //the lamp is off
     {
       pwm = 0;
     }
-    __HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_3, pwm); //update pwm value
+    __HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_3, pwm); //update 'pwm' value
     if(state == true && PIR == 1)
     {
      HAL_Delay(time*120);
